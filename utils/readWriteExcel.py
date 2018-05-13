@@ -200,14 +200,18 @@ class ReadWriteExcel(QObject):
         total = 0
         totaldiff = 0
         for i in range(1, len(yesterdaylist)):
-            if todydist.get(yesterdaylist[i][0]) != None:
-                diffvalue = int(round(eval(todydist.get(yesterdaylist[i][0])) - eval(yesterdaylist[i][1])))
-                diffdata.append([todydist[yesterdaylist[i][0]], diffvalue])
-                total = total + eval(todydist.get(yesterdaylist[i][0]))
-                totaldiff = totaldiff + diffvalue
-            else:
-                diffdata.append(['0', '0'])
-                newAddress.append([i, yesterdaylist[i][0], yesterdaylist[i][1]])
+            # if todydist.get(yesterdaylist[i][0]) != None:
+            #     diffvalue = int(round(eval(todydist.get(yesterdaylist[i][0])) - eval(yesterdaylist[i][1])))
+            #     diffdata.append([todydist[yesterdaylist[i][0]], diffvalue])
+            #     total = total + eval(todydist.get(yesterdaylist[i][0]))
+            #     totaldiff = totaldiff + diffvalue
+            # else:
+            #     diffdata.append(['0', '0'])
+            #     newAddress.append([i, yesterdaylist[i][0], yesterdaylist[i][1]])
+            diffvalue = int(round(eval(todydist.get(yesterdaylist[i][0], '0')) - eval(yesterdaylist[i][1])))
+            diffdata.append([todydist.get(yesterdaylist[i][0], '0'), diffvalue])
+            total = total + eval(todydist.get(yesterdaylist[i][0], '0'))
+            totaldiff = totaldiff + diffvalue
         diffdata.append([total, totaldiff])
         print(str(total) + ", " + str(totaldiff))
 
