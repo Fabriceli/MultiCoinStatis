@@ -7,10 +7,9 @@ from PyQt5.QtCore import *
 from utils.getWebInfo import *
 from utils.getTime import *
 from utils.readWriteExcel import *
+import os.path
 
-# global sec, count
 sec = 0
-count = 0
 
 erc20 = {'cs': '0x46b9ad944d1059450da1163511069c718f699d31',
          'jnt': '0xa5fd1a791c4dfcaacc963d4f73c6ae5824149ea7',
@@ -22,29 +21,22 @@ coins = []
 
 class WorkThread(QThread):
     trigger = pyqtSignal()
+    triggerText = pyqtSignal(bool, bool, str)  # 错误标志，清空消息标志，信息
 
     def __init__(self):
         super(WorkThread, self).__init__()
 
     def run(self):
-        global count
         for coin in coins:
             upateExcel(coin)
-        con = True
-        while con:
-            if count == len(coins):
-                con = False
-                self.trigger.emit()
+        self.trigger.emit()
 
 
 def countCoins(fileName, error):
-    global count
-    count += 1
     if error:
-        text.append("{}文件读写完成".format(fileName))
+        workThread.triggerText.emit(False, False, "{}文件读写完成".format(fileName))
     else:
-        text.setTextColor(QColor('red'))
-        text.append("{}文件读写失败，请关闭该文件，再开始".format(fileName))
+        workThread.triggerText.emit(False, False, "{}文件读写失败，请关闭该文件，再开始".format(fileName))
 
 
 def countTime():
@@ -52,11 +44,19 @@ def countTime():
     sec += 1
     lcdNumber.display(sec)
 
+def setText(error, clear, msg):
+    if clear:
+        text.clearHistory()
+        text.clear()
+    if error:
+        text.setTextColor(QColor('red'))
+    else:
+        text.setTextColor(QColor('black'))
+    text.append(msg)
+
 
 def work():
-    text.clearHistory()
-    text.setTextColor(QColor('black'))
-    text.setText("开始抓取数据。。。")
+    workThread.triggerText.emit(False, True, "开始抓取数据。。。")
     button.setEnabled(False)
     timer.start(1000)
     workThread.start()
@@ -66,13 +66,12 @@ def work():
 
 def timeStop():
     if len(coins) == 0:
-        text.setText("请选择统计的币种。")
+        workThread.triggerText.emit(True, True, "请选择统计的币种。")
     else:
-        text.append("运行结束用时：{}s".format(lcdNumber.value()))
+        workThread.triggerText.emit(True, False, "运行结束用时：{}s".format(lcdNumber.value()))
     timer.stop()
-    global sec, count
+    global sec
     sec = 0
-    count = 0
     button.setEnabled(True)
 
 
@@ -102,42 +101,47 @@ def doETH(filename, sheetdefault, coinsName, d, t, sheetNameDiff, firstdiff, yes
     firstListTEth = ['序号', '地址', 'Token数', '百分比', '交易笔数']
     url = 'https://www.yitaifang.com/accounts/'
     urlPrice = 'https://etherscan.io/'
-    webInfo = WebInfo(url)
-    success, msg = webInfo.getETH(uEthInfo, url)
-    if success:
-        top500 = webInfo.getTopPercent(uEthInfo, 500)
-        top250 = webInfo.getTopPercent(uEthInfo, 250)
-        top100 = webInfo.getTopPercent(uEthInfo, 100)
-        top50 = webInfo.getTopPercent(uEthInfo, 50)
-        top25 = webInfo.getTopPercent(uEthInfo, 25)
-        top10 = webInfo.getTopPercent(uEthInfo, 10)
-        top5 = webInfo.getTopPercent(uEthInfo, 5)
-        uEthToken.append(d)
-        uEthToken.append(t)
-        uEthToken.append(webInfo.getList(uEthInfo, 5))
-        uEthToken.append(webInfo.getList(uEthInfo, 10))
-        uEthToken.append(webInfo.getList(uEthInfo, 20))
-        uEthToken.append(webInfo.getList(uEthInfo, 50))
-        uEthToken.append('')
-        uEthToken.append(round(top500, 2))
-        uEthToken.append(round(top250, 2))
-        uEthToken.append(round(top100, 2))
-        uEthToken.append(round(top50, 2))
-        uEthToken.append(round(top25, 2))
-        uEthToken.append(round(top10, 2))
-        uEthToken.append(round(top5, 2))
-        uEthToken.append(webInfo.getETHPrice(urlPrice))
-        uEthToken.append(round(top10 - top5, 2))
-        uEthToken.append(round(top25 - top10, 2))
-        uEthToken.append(round(top50 - top25, 2))
-        uEthToken.append(round(top100 - top50, 2))
-        uEthToken.append(round(top250 - top100, 2))
-        uEthToken.append(round(top500 - top250, 2))
-        excel.writeExcel(filename, uEthInfo, uEthToken, firstListEth, firstListTEth, sheetdefault, d, len(uEthInfo), sheetNameDiff, firstdiff, yesterday)
+    driver_path = 'chromedriver.exe'
+    if os.path.isfile(driver_path):
+        webInfo = WebInfo(url)
+        success, msg = webInfo.getETH(driver_path, uEthInfo, url)
+        if success:
+            top500 = webInfo.getTopPercent(uEthInfo, 500)
+            top250 = webInfo.getTopPercent(uEthInfo, 250)
+            top100 = webInfo.getTopPercent(uEthInfo, 100)
+            top50 = webInfo.getTopPercent(uEthInfo, 50)
+            top25 = webInfo.getTopPercent(uEthInfo, 25)
+            top10 = webInfo.getTopPercent(uEthInfo, 10)
+            top5 = webInfo.getTopPercent(uEthInfo, 5)
+            uEthToken.append(d)
+            uEthToken.append(t)
+            uEthToken.append(webInfo.getList(uEthInfo, 5))
+            uEthToken.append(webInfo.getList(uEthInfo, 10))
+            uEthToken.append(webInfo.getList(uEthInfo, 20))
+            uEthToken.append(webInfo.getList(uEthInfo, 50))
+            uEthToken.append('')
+            uEthToken.append(round(top500, 2))
+            uEthToken.append(round(top250, 2))
+            uEthToken.append(round(top100, 2))
+            uEthToken.append(round(top50, 2))
+            uEthToken.append(round(top25, 2))
+            uEthToken.append(round(top10, 2))
+            uEthToken.append(round(top5, 2))
+            uEthToken.append(webInfo.getETHPrice(urlPrice))
+            uEthToken.append(round(top10 - top5, 2))
+            uEthToken.append(round(top25 - top10, 2))
+            uEthToken.append(round(top50 - top25, 2))
+            uEthToken.append(round(top100 - top50, 2))
+            uEthToken.append(round(top250 - top100, 2))
+            uEthToken.append(round(top500 - top250, 2))
+            excel.writeExcel(filename, uEthInfo, uEthToken, firstListEth, firstListTEth, sheetdefault, d, len(uEthInfo),
+                             sheetNameDiff, firstdiff, yesterday)
+        else:
+            workThread.triggerText.emit(True, True, "{}抓取网络数据失败，请检查网络连接。".format(coinsName))
     else:
-        timeStop()
-        text.setTextColor(QColor('red'))
-        text.setText("{}抓取网络数据失败，请检查网络连接。".format(coinsName) + msg)
+        workThread.triggerText.emit(True, True, "chromedriver.exe驱动文件不存在。")
+
+
 
 
 def doBTC(filename, sheetdefault, coinsName, d, t,sheetNameDiff, firstdiff, yesterday):
@@ -159,9 +163,7 @@ def doBTC(filename, sheetdefault, coinsName, d, t,sheetNameDiff, firstdiff, yest
         uBTCToken.append('')
         excel.writeExcel(filename, uBTCInfo, uBTCToken, firstListBTC, firstListTBTC, sheetdefault, d, len(uBTCInfo), sheetNameDiff, firstdiff, yesterday)
     else:
-        timeStop()
-        text.setTextColor(QColor('red'))
-        text.setText("{}抓取网络数据失败，请检查网络连接。".format(coinsName))
+        workThread.triggerText.emit(True, False, "{}抓取网络数据失败，请检查网络连接。".format(coinsName))
 
 
 def doOthers(filename, sheetdefault, coinsName, d, t, sheetNameDiff, firstdiff, yesterday):
@@ -210,9 +212,7 @@ def doOthers(filename, sheetdefault, coinsName, d, t, sheetNameDiff, firstdiff, 
         uToken.append(round(top500 - top250, 2))
         excel.writeExcel(filename, uInfo, uToken, firstList, firstListT, sheetdefault, d, range, sheetNameDiff, firstdiff, yesterday)
     else:
-        timeStop()
-        text.setTextColor(QColor('red'))
-        text.setText("{}抓取网络数据失败，请检查网络连接。".format(coinsName))
+        workThread.triggerText.emit(True, False, "{}抓取网络数据失败，请检查网络连接。".format(coinsName))
 
 
 def addcs(state):
@@ -258,11 +258,11 @@ def addbtc(state):
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     app.setApplicationName('区块链统计')
-    app.setWindowIcon(QIcon('images/blockchain.ico'))
+    app.setWindowIcon(QIcon('blockchain.ico'))
     top = QWidget()
-    top.resize(400, 200)
+    top.resize(600, 300)
     top.setWindowTitle('统计小工具')
-    top.setWindowIcon(QIcon('images/blockchain.ico'))
+    top.setWindowIcon(QIcon('blockchain.ico'))
     layout = QVBoxLayout(top)
 
     lbl1 = QLabel('选择统计的币：')
@@ -322,6 +322,7 @@ if __name__ == "__main__":
     excel = ReadWriteExcel()
     button.clicked.connect(work)
     timer.timeout.connect(countTime)
+    workThread.triggerText.connect(setText)
 
     top.show()
     sys.exit(app.exec_())

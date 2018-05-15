@@ -7,7 +7,6 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
-import os.path
 
 
 class WebInfo(object):
@@ -118,31 +117,26 @@ class WebInfo(object):
             print("获取对于以太坊价格失败")
             return result
 
-    def getETH(self, uInfo, url):
-        driver_path = "chromedriver.exe"
-        if os.path.isfile(driver_path):
-            options = Options()
-            options.add_argument('--headless')
-            driver = webdriver.Chrome(executable_path=driver_path, options=options)
-            try:
-                driver.get(url)
-                while len(uInfo) <= 500:
-                    WebDriverWait(driver, timeout=10).until(
-                        EC.presence_of_element_located((By.XPATH, "//tr[@class='J_link'][last()]")))
-                    source = driver.page_source
-                    self.parsePage(uInfo, source)
-                    next_btn = driver.find_element_by_class_name('next-page')
-                    next_btn.click()
-                    time.sleep(1)
-                driver.quit()
-                return True, ''
-            except:
-                driver.quit()
-                print("获取失败")
-                return False, "ETH获取网页失败"
-        else:
-            print("{}文件不存在。".format(driver_path))
-            return False, "{}文件不存在。".format(driver_path)
+    def getETH(self, driver_path, uInfo, url):
+        options = Options()
+        options.add_argument('--headless')
+        driver = webdriver.Chrome(executable_path=driver_path, options=options)
+        try:
+            driver.get(url)
+            while len(uInfo) <= 500:
+                WebDriverWait(driver, timeout=10).until(
+                    EC.presence_of_element_located((By.XPATH, "//tr[@class='J_link'][last()]")))
+                source = driver.page_source
+                self.parsePage(uInfo, source)
+                next_btn = driver.find_element_by_class_name('next-page')
+                next_btn.click()
+                time.sleep(1)
+            driver.quit()
+            return True, ''
+        except:
+            driver.quit()
+            print("获取失败")
+            return False, "ETH获取网页失败"
 
 
     def parsePage(self, uInfo, source):
